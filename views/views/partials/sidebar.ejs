@@ -1,0 +1,33 @@
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <i class="bi bi-hospital-fill"></i>
+    <span>MediCare <small>HMS</small></span>
+  </div>
+
+  <ul class="sidebar-nav">
+    <li>
+      <a href="/dashboard" class="<%= currentPath === '/dashboard' ? 'active' : '' %>">
+        <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
+      </a>
+    </li>
+    <li>
+      <a href="/patients" class="<%= currentPath.startsWith('/patients') ? 'active' : '' %>">
+        <i class="bi bi-people-fill"></i> <span>Patients</span>
+      </a>
+    </li>
+    <li>
+      <a href="/doctors" class="<%= currentPath.startsWith('/doctors') ? 'active' : '' %>">
+        <i class="bi bi-person-badge-fill"></i> <span>Doctors</span>
+      </a>
+    </li>
+    <li>
+      <a href="/appointments" class="<%= currentPath.startsWith('/appointments') ? 'active' : '' %>">
+        <i class="bi bi-calendar2-check-fill"></i> <span>Appointments</span>
+      </a>
+    </li>
+  </ul>
+
+  <div class="sidebar-footer">
+    <span class="badge bg-light text-dark text-uppercase"><%= currentUser ? currentUser.role : '' %></span>
+  </div>
+</nav>
