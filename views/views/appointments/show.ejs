@@ -1,0 +1,52 @@
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card-panel">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <h5 class="mb-0">Appointment Details</h5>
+        <span class="badge badge-status-<%= appointment.status %>"><%= appointment.status %></span>
+      </div>
+      <hr>
+      <p class="mb-1 small"><strong>Patient:</strong> <a href="/patients/<%= appointment.patient._id %>"><%= appointment.patient.name %></a></p>
+      <p class="mb-1 small"><strong>Doctor:</strong> Dr. <%= appointment.doctor.name %> (<%= appointment.doctor.specialization %>)</p>
+      <p class="mb-1 small"><strong>Date:</strong> <%= new Date(appointment.date).toLocaleDateString() %></p>
+      <p class="mb-1 small"><strong>Time:</strong> <%= appointment.time %></p>
+      <p class="mb-1 small"><strong>Reason:</strong> <%= appointment.reason || '—' %></p>
+      <% if (appointment.aiUrgency) { %>
+        <p class="mb-1 small">
+          <strong>AI Triage:</strong>
+          <span class="badge badge-<%= appointment.aiUrgency %>"><%= appointment.aiUrgency %></span>
+          suggested <strong><%= appointment.aiSuggestedDepartment %></strong>
+          <% if (appointment.aiReasoning) { %> — <span class="text-muted"><%= appointment.aiReasoning %></span><% } %>
+        </p>
+      <% } %>
+      <p class="mb-3 small"><strong>Notes:</strong> <%= appointment.notes || 'None' %></p>
+
+      <% if (['admin','receptionist'].includes(currentUser.role)) { %>
+        <a href="/appointments/<%= appointment._id %>/edit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil me-1"></i>Edit</a>
+      <% } %>
+    </div>
+  </div>
+
+  <% if (currentUser.role === 'doctor') { %>
+    <div class="col-lg-6">
+      <div class="card-panel">
+        <h5>Update Appointment</h5>
+        <form action="/appointments/<%= appointment._id %>/status?_method=PUT" method="POST">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Status</label>
+            <select name="status" class="form-select">
+              <% ['Scheduled','Completed','Cancelled'].forEach(s => { %>
+                <option value="<%= s %>" <%= appointment.status === s ? 'selected' : '' %>><%= s %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Consultation Notes</label>
+            <textarea name="notes" rows="4" class="form-control" placeholder="Diagnosis, prescription, follow-up instructions..."><%= appointment.notes %></textarea>
+          </div>
+          <button type="submit" class="btn btn-hms-primary">Save Update</button>
+        </form>
+      </div>
+    </div>
+  <% } %>
+</div>

@@ -1,0 +1,138 @@
+<div class="card-panel" style="max-width: 640px;">
+  <h5><%= appointment ? 'Edit Appointment' : 'Schedule New Appointment' %></h5>
+
+  <form action="<%= appointment ? '/appointments/' + appointment._id + '?_method=PUT' : '/appointments' %>" method="POST">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label small fw-semibold">Patient</label>
+        <select name="patient" class="form-select" required>
+          <option value="">Select patient</option>
+          <% patients.forEach(p => { %>
+            <% const selected = appointment ? String(appointment.patient) === String(p._id) : preselectPatient === String(p._id); %>
+            <option value="<%= p._id %>" <%= selected ? 'selected' : '' %>><%= p.name %> (<%= p.phone %>)</option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label small fw-semibold">Doctor</label>
+        <select name="doctor" class="form-select" required>
+          <option value="">Select doctor</option>
+          <% doctors.forEach(d => { %>
+            <option value="<%= d._id %>" <%= appointment && String(appointment.doctor) === String(d._id) ? 'selected' : '' %>>Dr. <%= d.name %> — <%= d.specialization %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label small fw-semibold">Date</label>
+        <input type="date" name="date" class="form-control" value="<%= appointment ? new Date(appointment.date).toISOString().substring(0,10) : '' %>" required>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label small fw-semibold">Time</label>
+        <input type="text" name="time" class="form-control" placeholder="e.g. 10:30 AM" value="<%= appointment ? appointment.time : '' %>" required>
+      </div>
+
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <label class="form-label small fw-semibold mb-0">Reason for Visit</label>
+          <button type="button" id="triageBtn" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-magic me-1"></i>Analyze with AI
+          </button>
+        </div>
+        <textarea name="reason" id="reasonField" rows="2" class="form-control mt-1" placeholder="e.g. Chest pain and shortness of breath since this morning"><%= appointment ? appointment.reason : '' %></textarea>
+        <div id="triageResult" class="mt-2 d-none">
+          <div class="alert py-2 px-3 small mb-0" id="triageAlert">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <strong>Suggested department:</strong> <span id="triageDept"></span><br>
+                <strong>Urgency:</strong> <span id="triageUrgency" class="badge"></span><br>
+                <span class="text-muted" id="triageReasoning"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" name="aiUrgency" id="aiUrgencyField" value="<%= appointment && appointment.aiUrgency ? appointment.aiUrgency : '' %>">
+        <input type="hidden" name="aiSuggestedDepartment" id="aiDeptField" value="<%= appointment && appointment.aiSuggestedDepartment ? appointment.aiSuggestedDepartment : '' %>">
+        <input type="hidden" name="aiReasoning" id="aiReasoningField" value="<%= appointment && appointment.aiReasoning ? appointment.aiReasoning : '' %>">
+      </div>
+
+      <% if (appointment) { %>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Status</label>
+          <select name="status" class="form-select">
+            <% ['Scheduled','Completed','Cancelled'].forEach(s => { %>
+              <option value="<%= s %>" <%= appointment.status === s ? 'selected' : '' %>><%= s %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label small fw-semibold">Notes</label>
+          <textarea name="notes" rows="2" class="form-control"><%= appointment.notes %></textarea>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+      <button type="submit" class="btn btn-hms-primary"><%= appointment ? 'Save Changes' : 'Schedule Appointment' %></button>
+      <a href="/appointments" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+document.getElementById('triageBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('triageBtn');
+  const reason = document.getElementById('reasonField').value;
+  if (!reason.trim()) {
+    alert('Please enter a reason for visit first.');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Analyzing...';
+
+  try {
+    const res = await fetch('/appointments/triage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'AI triage failed');
+    }
+
+    document.getElementById('triageDept').textContent = data.department;
+    document.getElementById('triageReasoning').textContent = data.reasoning;
+
+    const urgencyBadge = document.getElementById('triageUrgency');
+    urgencyBadge.textContent = data.urgency;
+    urgencyBadge.className = 'badge badge-' + data.urgency;
+
+    const alertBox = document.getElementById('triageAlert');
+    alertBox.className = 'alert py-2 px-3 small mb-0 ' +
+      (data.urgency === 'Emergency' ? 'alert-danger' : data.urgency === 'High' ? 'alert-warning' : 'alert-info');
+
+    document.getElementById('triageResult').classList.remove('d-none');
+    document.getElementById('aiUrgencyField').value = data.urgency;
+    document.getElementById('aiDeptField').value = data.department;
+    document.getElementById('aiReasoningField').value = data.reasoning;
+
+    // Try to pre-select a doctor from the suggested department, if the doctor field is still empty
+    const doctorSelect = document.querySelector('select[name="doctor"]');
+    if (doctorSelect && !doctorSelect.value) {
+      const match = Array.from(doctorSelect.options).find(opt =>
+        opt.textContent.toLowerCase().includes(data.department.toLowerCase())
+      );
+      if (match) match.selected = true;
+    }
+  } catch (err) {
+    alert(err.message || 'Could not analyze symptoms right now. Please select the doctor manually.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-magic me-1"></i>Analyze with AI';
+  }
+});
+</script>
+

@@ -1,0 +1,60 @@
+<div class="card-panel">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div class="btn-group btn-group-sm" role="group">
+      <a href="/appointments" class="btn btn-outline-secondary <%= !statusFilter ? 'active' : '' %>">All</a>
+      <a href="/appointments?status=Scheduled" class="btn btn-outline-secondary <%= statusFilter === 'Scheduled' ? 'active' : '' %>">Scheduled</a>
+      <a href="/appointments?status=Completed" class="btn btn-outline-secondary <%= statusFilter === 'Completed' ? 'active' : '' %>">Completed</a>
+      <a href="/appointments?status=Cancelled" class="btn btn-outline-secondary <%= statusFilter === 'Cancelled' ? 'active' : '' %>">Cancelled</a>
+    </div>
+    <% if (['admin','receptionist'].includes(currentUser.role)) { %>
+      <a href="/appointments/new" class="btn btn-hms-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Schedule Appointment</a>
+    <% } %>
+  </div>
+
+  <% if (appointments.length === 0) { %>
+    <p class="text-muted small mb-0">No appointments found.</p>
+  <% } else { %>
+    <div class="table-responsive">
+      <table class="table table-hms mb-0">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Patient</th>
+            <th>Doctor</th>
+            <th>Status</th>
+            <th>AI Urgency</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% appointments.forEach(a => { %>
+            <tr class="row-link" onclick="if(!event.target.closest('a,button,form')) window.location='/appointments/<%= a._id %>'">
+              <td><%= new Date(a.date).toLocaleDateString() %></td>
+              <td><%= a.time %></td>
+              <td><%= a.patient ? a.patient.name : 'N/A' %></td>
+              <td><%= a.doctor ? a.doctor.name : 'N/A' %></td>
+              <td><span class="badge badge-status-<%= a.status %>"><%= a.status %></span></td>
+              <td>
+                <% if (a.aiUrgency) { %>
+                  <span class="badge badge-<%= a.aiUrgency %>"><%= a.aiUrgency %></span>
+                <% } else { %>
+                  <span class="text-muted small">—</span>
+                <% } %>
+              </td>
+              <td class="text-end">
+                <a href="/appointments/<%= a._id %>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                <% if (['admin','receptionist'].includes(currentUser.role)) { %>
+                  <a href="/appointments/<%= a._id %>/edit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                  <form action="/appointments/<%= a._id %>?_method=DELETE" method="POST" class="d-inline" onsubmit="return confirm('Remove this appointment?');">
+                    <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
