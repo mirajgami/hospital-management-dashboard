@@ -1,0 +1,262 @@
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card-panel">
+      <div class="d-flex justify-content-between align-items-start">
+        <h5 class="mb-0"><%= patient.name %></h5>
+        <span class="badge badge-status-<%= patient.status %>"><%= patient.status %></span>
+      </div>
+      <hr>
+      <p class="mb-1 small"><strong>Age / Gender:</strong> <%= patient.age %> yrs, <%= patient.gender %></p>
+      <p class="mb-1 small"><strong>Phone:</strong> <%= patient.phone %></p>
+      <p class="mb-1 small"><strong>Email:</strong> <%= patient.email || '—' %></p>
+      <p class="mb-1 small"><strong>Blood Group:</strong> <%= patient.bloodGroup || '—' %></p>
+      <p class="mb-1 small"><strong>Address:</strong> <%= patient.address || '—' %></p>
+      <p class="mb-3 small"><strong>Medical History:</strong><br><%= patient.medicalHistory || 'None recorded.' %></p>
+
+      <% if (['admin','receptionist'].includes(currentUser.role)) { %>
+        <div class="d-flex gap-2">
+          <a href="/patients/<%= patient._id %>/edit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil me-1"></i>Edit</a>
+          <a href="/appointments/new?patient=<%= patient._id %>" class="btn btn-sm btn-hms-primary"><i class="bi bi-calendar-plus me-1"></i>Schedule Visit</a>
+        </div>
+      <% } %>
+    </div>
+
+    <% if (['admin','doctor'].includes(currentUser.role)) { %>
+    <div class="card-panel mt-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0"><i class="bi bi-stars me-1"></i>AI Patient Summary</h5>
+        <button type="button" id="summaryBtn" class="btn btn-sm btn-outline-primary">Generate</button>
+      </div>
+      <div id="summaryBox">
+        <% if (patient.aiSummary) { %>
+          <p class="small mb-1" style="white-space: pre-line;"><%= patient.aiSummary %></p>
+          <p class="text-muted small mb-0" id="summaryTimestamp">Generated <%= new Date(patient.aiSummaryGeneratedAt).toLocaleString() %></p>
+        <% } else { %>
+          <p class="text-muted small mb-0" id="summaryPlaceholder">No summary generated yet. Click Generate to have AI condense this patient's history, visits, and prescriptions.</p>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card-panel mb-3">
+      <h5>Appointment History</h5>
+      <% if (appointments.length === 0) { %>
+        <p class="text-muted small mb-0">No appointments recorded for this patient.</p>
+      <% } else { %>
+        <div class="table-responsive">
+          <table class="table table-hms mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Doctor</th>
+                <th>Reason</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% appointments.forEach(a => { %>
+                <tr>
+                  <td><%= new Date(a.date).toLocaleDateString() %></td>
+                  <td><%= a.time %></td>
+                  <td><%= a.doctor ? a.doctor.name : 'N/A' %></td>
+                  <td><%= a.reason || '—' %></td>
+                  <td><span class="badge badge-status-<%= a.status %>"><%= a.status %></span></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="card-panel">
+      <h5>Prescriptions</h5>
+      <% if (prescriptions.length === 0) { %>
+        <p class="text-muted small mb-0">No prescriptions recorded yet.</p>
+      <% } else { %>
+        <div class="table-responsive mb-3">
+          <table class="table table-hms mb-0">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Medicine</th>
+                <th>Dosage</th>
+                <th>Frequency</th>
+                <th>Duration</th>
+                <th>Prescribed By</th>
+                <% if (['admin','doctor'].includes(currentUser.role)) { %><th></th><% } %>
+              </tr>
+            </thead>
+            <tbody>
+              <% prescriptions.forEach(rx => { %>
+                <tr>
+                  <td><%= new Date(rx.date).toLocaleDateString() %></td>
+                  <td class="fw-semibold"><%= rx.medicineName %></td>
+                  <td><%= rx.dosage || '—' %></td>
+                  <td><%= rx.frequency || '—' %></td>
+                  <td><%= rx.duration || '—' %></td>
+                  <td><%= rx.prescribedBy ? rx.prescribedBy.name : '—' %></td>
+                  <% if (['admin','doctor'].includes(currentUser.role)) { %>
+                    <td class="text-end">
+                      <form action="/patients/<%= patient._id %>/prescriptions/<%= rx._id %>?_method=DELETE" method="POST" onsubmit="return confirm('Remove this prescription?');">
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                      </form>
+                    </td>
+                  <% } %>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+
+      <% if (['admin','doctor'].includes(currentUser.role)) { %>
+        <hr>
+        <h6 class="fw-bold small text-uppercase text-muted mb-3">Add Prescription</h6>
+        <form action="/patients/<%= patient._id %>/prescriptions" method="POST">
+          <div class="row g-3">
+            <div class="col-md-6 position-relative">
+              <label class="form-label small fw-semibold">Medicine Name</label>
+              <input type="text" name="medicineName" id="medicineInput" class="form-control" placeholder="Start typing..." autocomplete="off" required>
+              <input type="hidden" name="medicineId" id="medicineIdField">
+              <div id="medicineDropdown" class="list-group position-absolute w-100 shadow-sm d-none" style="z-index: 20; max-height: 260px; overflow-y: auto;"></div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">Dosage</label>
+              <input type="text" name="dosage" class="form-control" placeholder="e.g. 500mg">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small fw-semibold">Frequency</label>
+              <input type="text" name="frequency" class="form-control" placeholder="e.g. Twice daily">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold">Duration</label>
+              <input type="text" name="duration" class="form-control" placeholder="e.g. 5 days">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label small fw-semibold">Instructions</label>
+              <input type="text" name="instructions" class="form-control" placeholder="e.g. After food">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-hms-primary btn-sm mt-3"><i class="bi bi-plus-lg me-1"></i>Add Prescription</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const input = document.getElementById('medicineInput');
+  if (!input) return; // not admin/doctor, form isn't rendered
+
+  const dropdown = document.getElementById('medicineDropdown');
+  const idField = document.getElementById('medicineIdField');
+  const patientId = '<%= patient._id %>';
+  let debounceTimer;
+
+  function renderDropdown(data) {
+    dropdown.innerHTML = '';
+    const sections = [];
+
+    if (data.patientHistory && data.patientHistory.length) {
+      sections.push({ label: 'Prescribed to this patient before', items: data.patientHistory, badge: 'Past' });
+    }
+    if (data.catalogMatches && data.catalogMatches.length) {
+      sections.push({ label: 'Hospital catalog', items: data.catalogMatches, badge: 'Catalog' });
+    }
+
+    if (sections.length === 0 && data.aiSuggestion) {
+      const s = data.aiSuggestion;
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'list-group-item list-group-item-action small';
+      item.innerHTML = `<span class="badge bg-primary me-2">AI</span><strong>${s.matchedName || s.correctedQuery}</strong>` +
+        (s.note ? `<div class="text-muted" style="font-size:.75rem;">${s.note}</div>` : '');
+      item.onclick = () => selectMedicine(s.matchedName || s.correctedQuery, null);
+      dropdown.appendChild(item);
+    }
+
+    sections.forEach((section) => {
+      const header = document.createElement('div');
+      header.className = 'list-group-item list-group-item-secondary small fw-semibold py-1';
+      header.textContent = section.label;
+      dropdown.appendChild(header);
+
+      section.items.forEach((med) => {
+        const name = med.medicineName || med.name;
+        const meta = med.dosage || med.genericName || med.frequency || '';
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'list-group-item list-group-item-action small d-flex justify-content-between align-items-center';
+        item.innerHTML = `<span><strong>${name}</strong>${meta ? ` <span class="text-muted">— ${meta}</span>` : ''}</span>` +
+          `<span class="badge bg-light text-dark border">${section.badge}</span>`;
+        item.onclick = () => selectMedicine(name, med._id && !med.medicineName ? med._id : null, med.dosage, med.frequency);
+        dropdown.appendChild(item);
+      });
+    });
+
+    dropdown.classList.toggle('d-none', dropdown.children.length === 0);
+  }
+
+  function selectMedicine(name, medicineId, dosage, frequency) {
+    input.value = name;
+    idField.value = medicineId || '';
+    if (dosage) document.querySelector('input[name="dosage"]').value = dosage;
+    if (frequency) document.querySelector('input[name="frequency"]').value = frequency;
+    dropdown.classList.add('d-none');
+  }
+
+  input.addEventListener('input', () => {
+    idField.value = '';
+    clearTimeout(debounceTimer);
+    const q = input.value.trim();
+    if (q.length < 2) {
+      dropdown.classList.add('d-none');
+      return;
+    }
+    debounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/medicines/search?q=${encodeURIComponent(q)}&patientId=${patientId}`);
+        const data = await res.json();
+        renderDropdown(data);
+      } catch (e) {
+        dropdown.classList.add('d-none');
+      }
+    }, 300);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!dropdown.contains(e.target) && e.target !== input) {
+      dropdown.classList.add('d-none');
+    }
+  });
+
+  // AI Patient Summary
+  const summaryBtn = document.getElementById('summaryBtn');
+  if (summaryBtn) {
+    summaryBtn.addEventListener('click', async () => {
+      summaryBtn.disabled = true;
+      summaryBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+      try {
+        const res = await fetch(`/patients/${patientId}/ai-summary`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed');
+        document.getElementById('summaryBox').innerHTML =
+          `<p class="small mb-1" style="white-space: pre-line;">${data.summary}</p>` +
+          `<p class="text-muted small mb-0">Generated ${new Date(data.generatedAt).toLocaleString()}</p>`;
+      } catch (err) {
+        document.getElementById('summaryBox').innerHTML =
+          `<p class="text-danger small mb-0">${err.message || 'Could not generate summary right now.'}</p>`;
+      } finally {
+        summaryBtn.disabled = false;
+        summaryBtn.textContent = 'Regenerate';
+      }
+    });
+  }
+})();
+</script>
+
