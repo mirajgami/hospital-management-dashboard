@@ -1,0 +1,99 @@
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon blue"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="stat-value"><%= totalPatients %></div>
+        <div class="stat-label">Total Patients</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon teal"><i class="bi bi-person-badge-fill"></i></div>
+      <div>
+        <div class="stat-value"><%= totalDoctors %></div>
+        <div class="stat-label">Active Doctors</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon orange"><i class="bi bi-calendar2-check-fill"></i></div>
+      <div>
+        <div class="stat-value"><%= todayAppointments %></div>
+        <div class="stat-label">Today's Appointments</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon purple"><i class="bi bi-clock-history"></i></div>
+      <div>
+        <div class="stat-value"><%= upcomingAppointments.length %></div>
+        <div class="stat-label">Upcoming (shown below)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card-panel">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">Upcoming Appointments</h5>
+        <a href="/appointments" class="small">View all &rarr;</a>
+      </div>
+      <% if (upcomingAppointments.length === 0) { %>
+        <p class="text-muted small mb-0">No upcoming appointments scheduled.</p>
+      <% } else { %>
+        <div class="table-responsive">
+          <table class="table table-hms mb-0">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Doctor</th>
+                <th>Date</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% upcomingAppointments.forEach(appt => { %>
+                <tr>
+                  <td><%= appt.patient ? appt.patient.name : 'N/A' %></td>
+                  <td><%= appt.doctor ? appt.doctor.name : 'N/A' %></td>
+                  <td><%= new Date(appt.date).toLocaleDateString() %></td>
+                  <td><%= appt.time %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card-panel">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">Recently Registered Patients</h5>
+        <a href="/patients" class="small">View all &rarr;</a>
+      </div>
+      <% if (recentPatients.length === 0) { %>
+        <p class="text-muted small mb-0">No patients registered yet.</p>
+      <% } else { %>
+        <ul class="list-group list-group-flush">
+          <% recentPatients.forEach(p => { %>
+            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+              <div>
+                <a href="/patients/<%= p._id %>" class="text-decoration-none fw-semibold"><%= p.name %></a>
+                <div class="text-muted small"><%= p.age %> yrs &middot; <%= p.gender %></div>
+              </div>
+              <span class="badge badge-status-<%= p.status %>"><%= p.status %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div>
+  </div>
+</div>
